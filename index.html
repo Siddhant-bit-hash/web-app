@@ -88,11 +88,9 @@
         const ctx = outputCanvas.getContext('2d');
 
         // --- Configuration ---
-        // IMPORTANT: Adjust this path if your model files are in a subfolder
-        // e.g., './model/model.json' if they are in a 'model' folder
-        const MODEL_URL = './model.json';
-        // MoveNet Model Type (adjust if using 'thunder')
-        // Use 'MoveNetModel.Lightning' or 'MoveNetModel.Thunder'
+        // Path to YOUR model.json (if using custom model)
+        const CUSTOM_MODEL_URL = './model.json'; // Keep your path here
+        // MoveNet Model Type
         const MODEL_TYPE = poseDetection.SupportedModels.MoveNet;
         const movenetType = poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING; // Or .SINGLEPOSE_THUNDER
 
@@ -137,10 +135,7 @@
             ctx.lineWidth = 2;
 
             // Define connections based on MoveNet keypoint order
-            // See https://github.com/tensorflow/tfjs-models/tree/master/pose-detection#movenet-keypoints-used-in-poseskeleton
              const connections = [
-                // Face lines are often omitted for clarity, add if needed
-                // [0, 1], [0, 2], [1, 3], [2, 4], // Face
                 [5, 6], // Torso line
                 [5, 7], [7, 9], // Left arm
                 [6, 8], [8, 10], // Right arm
@@ -178,11 +173,19 @@
 
                 const detectorConfig = {
                     modelType: movenetType,
-                    modelUrl: MODEL_URL // Use the custom model URL
+                    // === TEST: Comment out modelUrl to load the DEFAULT model ===
+                    // modelUrl: CUSTOM_MODEL_URL // Use the custom model URL
+                    // ============================================================
                 };
+                // If modelUrl is commented out, createDetector will load the default
+                // model associated with 'movenetType' from Google's CDN.
                 detector = await poseDetection.createDetector(MODEL_TYPE, detectorConfig);
-                showStatus('Model loaded. Ready for image upload.');
-                console.log('MoveNet detector loaded successfully.');
+
+                // Determine which model was loaded for the status message
+                const loadedModelSource = detectorConfig.modelUrl ? "custom model" : "default Google model";
+                showStatus(`Model loaded (${loadedModelSource}). Ready for image upload.`);
+                console.log(`MoveNet detector loaded successfully (${loadedModelSource}).`);
+
             } catch (error) {
                 showStatus('Error loading model. Check console.');
                 console.error('Error loading MoveNet model:', error);
@@ -222,10 +225,6 @@
                     // Clear previous drawings
                     ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-                    // Draw the original image onto the canvas (optional, can use CSS background)
-                    // ctx.drawImage(currentImage, 0, 0, outputCanvas.width, outputCanvas.height);
-
-
                     if (poses && poses.length > 0) {
                         // Draw keypoints and skeleton for the first detected pose
                         drawKeypoints(poses[0].keypoints);
@@ -236,8 +235,9 @@
                         showStatus('No pose detected in the image.');
                     }
                 } catch (error) {
+                    // This is where your error is currently happening
                     showStatus('Error during pose estimation. Check console.');
-                    console.error('Error estimating pose:', error);
+                    console.error('Error estimating pose:', error); // Log the specific error
                 } finally {
                     URL.revokeObjectURL(currentImage.src); // Clean up blob URL
                 }
