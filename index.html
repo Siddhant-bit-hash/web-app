@@ -1,418 +1,276 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2575.3">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
-    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoveNet MultiPose Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+
+    <style>
+        /* Custom styles for better visual feedback */
+        body {
+            font-family: 'Inter', sans-serif; /* Assuming Inter font is preferred */
+        }
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Ensure canvas overlays the image correctly */
+        #output-container {
+            position: relative;
+            max-width: 100%; /* Limit container width */
+            margin: auto; /* Center the container */
+        }
+        #output-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #uploaded-image {
+            display: block; /* Prevents extra space below image */
+            max-width: 100%; /* Make image responsive */
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 0.5rem; /* Rounded corners */
+        }
+        /* Add distinct colors for multiple poses */
+        .pose-colors {
+            --color-0: aqua;
+            --color-1: lime;
+            --color-2: yellow;
+            --color-3: fuchsia;
+            --color-4: orange;
+            --color-5: red;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
-<body>
-<p class="p1">&lt;!DOCTYPE html&gt;</p>
-<p class="p1">&lt;html lang="en"&gt;</p>
-<p class="p1">&lt;head&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;Happy Birthday Muskan!&lt;/title&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&amp;family=Pacifico&amp;display=swap" rel="stylesheet"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;style&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>body {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>font-family: 'Nunito', sans-serif;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>overflow: hidden;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>margin: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #fffbeb; /* A very light cream background for the body */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.page {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>top: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>left: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>justify-content: center;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>align-items: center;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>text-align: center;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>padding: 20px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>box-sizing: border-box;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>visibility: hidden;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: scale(0.95);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>backface-visibility: hidden;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.page.active {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 1;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>visibility: visible;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: scale(1);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.page-up {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: translateY(-100%);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.page-down {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: translateY(100%);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.page-fade-out {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: scale(1.05);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>.title-font {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>font-family: 'Pacifico', cursive;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* Cake styles */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-container {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: relative;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 200px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 220px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 30px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>cursor: pointer;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-base {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 200px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 100px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #f4a261; /* Cake color */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 10px 10px 50% 50% / 0 0 30px 30px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>bottom: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>box-shadow: 0 10px 20px rgba(0,0,0,0.2);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-icing {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 210px; /* Slightly wider for drip effect */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 50px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #e76f51; /* Icing color */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 50% / 25px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>top: 70px; /* Positioned on top of the base */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>left: -5px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>box-shadow: 0 5px 10px rgba(0,0,0,0.1);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-icing::before, .cake-icing::after { /* Drips */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>content: '';</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 30px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 40px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #e76f51;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 0 0 15px 15px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>top: 20px;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-icing::before { left: 30px; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-icing::after { right: 30px; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>.candle {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 10px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 40px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #fff;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>top: 40px; /* Positioned above icing */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 5px 5px 0 0;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.candle.c1 { left: 70px; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.candle.c2 { left: 95px; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.candle.c3 { left: 120px; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>.flame {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 8px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #fca311;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>top: -10px; /* Above the candle */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>left: 1px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>animation: flicker 0.5s infinite alternate;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform-origin: bottom;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>@keyframes flicker {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>0% { transform: scaleY(1) scaleX(1); opacity: 1; }</p>
-<p class="p1"><span class="Apple-converted-space">            </span>50% { transform: scaleY(0.95) scaleX(1.05); opacity: 0.8; }</p>
-<p class="p1"><span class="Apple-converted-space">            </span>100% { transform: scaleY(1.05) scaleX(0.95); opacity: 1; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.flame.out {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>animation: none;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: scale(0);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transition: opacity 0.3s ease-out, transform 0.3s ease-out;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-slice {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-left: 50px solid transparent;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-right: 50px solid transparent;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-bottom: 90px solid #d48c50; /* Inner cake color */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>top: 100px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>left: 50px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: rotate(0deg) translateX(150px) scale(0);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s ease-out;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform-origin: 0% 100%;<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-container.cut .cake-slice {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: rotate(-30deg) translateX(0px) scale(1);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 1;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.cake-container.cut .flame {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 0;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* Button style */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.btn {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #2a9d8f; /* Teal button */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>color: white;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>padding: 12px 25px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 25px; /* Rounded pill shape */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>font-weight: bold;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>text-transform: uppercase;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>letter-spacing: 1px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>box-shadow: 0 4px 6px rgba(0,0,0,0.1);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transition: transform 0.2s ease-out, background-color 0.2s;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>cursor: pointer;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border: none;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>margin-top: 20px;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.btn:hover {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>transform: translateY(-2px);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: #264653; /* Darker teal on hover */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* Confetti */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti-container {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: fixed;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>top: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>left: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>pointer-events: none;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>overflow: hidden;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>z-index: 9999;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 10px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 10px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background-color: red; /* Default, will be overridden */</p>
-<p class="p1"><span class="Apple-converted-space">            </span>opacity: 0.7;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>animation: fall 5s linear infinite;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* Specific confetti styles */</p>
-<p class="p1"><span class="Apple-converted-space">         </span>.confetti.c1 { background-color: #f4a261; left: 10%; animation-duration: 4s; animation-delay: 0s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c2 { background-color: #e76f51; left: 20%; animation-duration: 5s; animation-delay: 1s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c3 { background-color: #2a9d8f; left: 30%; animation-duration: 3s; animation-delay: 2s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c4 { background-color: #264653; left: 40%; animation-duration: 6s; animation-delay: 0.5s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c5 { background-color: #e9c46a; left: 50%; animation-duration: 4.5s; animation-delay: 1.5s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c6 { background-color: #f4a261; left: 60%; animation-duration: 5.5s; animation-delay: 2.5s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c7 { background-color: #e76f51; left: 70%; animation-duration: 3.5s; animation-delay: 0.2s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c8 { background-color: #2a9d8f; left: 80%; animation-duration: 6.5s; animation-delay: 1.2s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c9 { background-color: #264653; left: 90%; animation-duration: 4.2s; animation-delay: 2.2s; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.confetti.c10 { background-color: #e9c46a; left: 5%; animation-duration: 5.8s; animation-delay: 0.8s; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>@keyframes fall {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>0% {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>transform: translateY(-10vh) rotate(0deg);</p>
-<p class="p1"><span class="Apple-converted-space">                </span>opacity: 1;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p1"><span class="Apple-converted-space">            </span>100% {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>transform: translateY(110vh) rotate(720deg);</p>
-<p class="p1"><span class="Apple-converted-space">                </span>opacity: 0;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.hidden {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>display: none;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</p>
-<p class="p1">&lt;/head&gt;</p>
-<p class="p1">&lt;body class="bg-yellow-50"&gt;<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="confetti-container" class="confetti-container hidden"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="page1" class="page active bg-gradient-to-br from-amber-400 via-orange-500 to-red-500"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;h1 class="text-5xl md:text-6xl title-font text-white mb-6 drop-shadow-lg"&gt;Happy Birthday&lt;/h1&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;h2 class="text-6xl md:text-7xl title-font text-white mb-12 drop-shadow-xl"&gt;Muskan!&lt;/h2&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;p class="text-lg text-white mb-8"&gt;Get ready for a little celebration!&lt;/p&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button id="startButton" class="btn"&gt;Let's Start!&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="page2" class="page bg-gradient-to-br from-purple-400 to-indigo-400"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;h2 class="text-4xl title-font text-white mb-2"&gt;Make a Wish &amp;&lt;/h2&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;h3 class="text-3xl title-font text-white mb-8"&gt;Cut the Cake!&lt;/h3&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;div id="cakeContainer" class="cake-container"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="cake-base"&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="cake-icing"&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="candle c1"&gt;&lt;div class="flame"&gt;&lt;/div&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="candle c2"&gt;&lt;div class="flame"&gt;&lt;/div&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="candle c3"&gt;&lt;div class="flame"&gt;&lt;/div&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="cake-slice"&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;p id="cakeInstruction" class="text-md text-gray-200"&gt;Tap the cake to cut it!&lt;/p&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button id="proceedToMessage1" class="btn hidden mt-8"&gt;See Your Wishes&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="page3" class="page bg-gradient-to-br from-green-300 to-teal-400"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;h2 class="text-4xl title-font text-white mb-6"&gt;A Special Wish For You...&lt;/h2&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="bg-white/80 p-6 rounded-xl shadow-xl max-w-md mx-4"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;p id="message1Text" class="text-gray-700 text-lg md:text-xl leading-relaxed"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                </span>Hello muskan.. waise to koi aur bhi tujhe wish krna chah rha tha pr I though what can be more special then receiving the 1st wish from your crush??😂😂😂 I know we were not in touch beech me lekin ab jab connect huye h to aise huye h ki bs you have become my comfort zone jisse mai jab chahu jo chahu wo share kr skta hu. Thank you so much yrr wo being there to talk late night and for making all those nights way more beautiful than they would have been if I were dating aditi.. dekh le beta abhi bhi mauka h🤣🤣.. anyways, I wish you a very happy birthday once again🥳🥳🥳🥳</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;/p&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button id="nextMessageButton" class="btn mt-8"&gt;One More Wish!&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="page4" class="page bg-gradient-to-br from-blue-300 to-sky-400"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;h2 class="text-4xl title-font text-white mb-6"&gt;And Another One...&lt;/h2&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="bg-white/80 p-6 rounded-xl shadow-xl max-w-md mx-4"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;p id="message2Text" class="text-gray-700 text-lg md:text-xl leading-relaxed"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                </span>feliz cumpleaños, Gracias por ser mi amiga, dekh abhi tk itni hi Spanish seekhi hai to itna hi likh paai hu, next birthday poora msg Spanish me hoga pakka, jise bs apn dono samajh paae 😂😂 school time pe itne acche dost nhi the, pr ab baate krke esa lgta hai ki bichde hue dost mil gae ho🥳, I cant tell how grateful I am jo ese apne calls hote hai aur apn baate krte hai, it just feels like home again, kid again, safe again and most importantly you are not alone wala feel. accha baki bate phone pe, abhi ke lie happy birthday again 🥳🥳 all the very best for life ahead<span class="Apple-converted-space">  </span>🥂</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;/p&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button id="restartButton" class="btn mt-8"&gt;Celebrate Again?&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>// DOM Elements</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const pages = document.querySelectorAll('.page');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const startButton = document.getElementById('startButton');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const cakeContainer = document.getElementById('cakeContainer');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const cakeInstruction = document.getElementById('cakeInstruction');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const proceedToMessage1Button = document.getElementById('proceedToMessage1');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const nextMessageButton = document.getElementById('nextMessageButton');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const restartButton = document.getElementById('restartButton');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const confettiContainer = document.getElementById('confetti-container');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const flames = document.querySelectorAll('.flame');</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// Message elements</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const message1TextElement = document.getElementById('message1Text');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>// const message2TextElement = document.getElementById('message2Text'); // Already set in HTML</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>let currentPage = 0;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>let cakeCut = false;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// Function to transition between pages</p>
-<p class="p1"><span class="Apple-converted-space">        </span>function goToPage(pageIndex) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>if (pages[currentPage]) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>// Determine transition direction</p>
-<p class="p1"><span class="Apple-converted-space">                </span>if (pageIndex &gt; currentPage) {</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>pages[currentPage].classList.add('page-up'); // Current page slides up</p>
-<p class="p1"><span class="Apple-converted-space">                </span>} else {</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>pages[currentPage].classList.add('page-down'); // Current page slides down (for restart)</p>
-<p class="p1"><span class="Apple-converted-space">                </span>}</p>
-<p class="p1"><span class="Apple-converted-space">                </span>pages[currentPage].classList.remove('active');</p>
-<p class="p1"><span class="Apple-converted-space">                </span>// Delay to allow slide-out animation before next page slides in</p>
-<p class="p1"><span class="Apple-converted-space">                </span>setTimeout(() =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>if (pages[currentPage]) pages[currentPage].classList.remove('page-up', 'page-down');</p>
-<p class="p1"><span class="Apple-converted-space">                </span>}, 800);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">            </span>currentPage = pageIndex;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>if (pages[currentPage]) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>pages[currentPage].classList.add('active');</p>
-<p class="p1"><span class="Apple-converted-space">                </span>if (pageIndex === 1 || pageIndex === 2 || pageIndex === 3) { // Show confetti on cake and message pages</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>startConfetti();</p>
-<p class="p1"><span class="Apple-converted-space">                </span>} else {</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>stopConfetti();</p>
-<p class="p1"><span class="Apple-converted-space">                </span>}</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// Event Listeners</p>
-<p class="p1"><span class="Apple-converted-space">        </span>startButton.addEventListener('click', () =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>goToPage(1); // Go to cake page</p>
-<p class="p1"><span class="Apple-converted-space">        </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>cakeContainer.addEventListener('click', () =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>if (!cakeCut) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>cakeContainer.classList.add('cut');</p>
-<p class="p1"><span class="Apple-converted-space">                </span>flames.forEach(flame =&gt; flame.classList.add('out'));</p>
-<p class="p1"><span class="Apple-converted-space">                </span>cakeInstruction.textContent = "Woohoo! Cake 'cut'!";</p>
-<p class="p1"><span class="Apple-converted-space">                </span>cakeCut = true;</p>
-<p class="p1"><span class="Apple-converted-space">                </span>// Show the proceed button after a short delay for the animation</p>
-<p class="p1"><span class="Apple-converted-space">                </span>setTimeout(() =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>proceedToMessage1Button.classList.remove('hidden');</p>
-<p class="p1"><span class="Apple-converted-space">                </span>}, 800); // Match slice animation duration (0.8s)</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>proceedToMessage1Button.addEventListener('click', () =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>if (cakeCut) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>goToPage(2); // Go to first message page</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>nextMessageButton.addEventListener('click', () =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>goToPage(3); // Go to second message page</p>
-<p class="p1"><span class="Apple-converted-space">        </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>restartButton.addEventListener('click', () =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>cakeCut = false;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>cakeContainer.classList.remove('cut');</p>
-<p class="p1"><span class="Apple-converted-space">            </span>flames.forEach(flame =&gt; flame.classList.remove('out'));</p>
-<p class="p1"><span class="Apple-converted-space">            </span>cakeInstruction.textContent = "Tap the cake to cut it!";</p>
-<p class="p1"><span class="Apple-converted-space">            </span>proceedToMessage1Button.classList.add('hidden');</p>
-<p class="p1"><span class="Apple-converted-space">            </span>goToPage(0); // Go back to the first page</p>
-<p class="p1"><span class="Apple-converted-space">        </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// Confetti generation</p>
-<p class="p1"><span class="Apple-converted-space">        </span>function createConfettiPiece() {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>const confetti = document.createElement('div');</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confetti.classList.add('confetti');</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confetti.style.left = Math.random() * 100 + 'vw';</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confetti.style.width = Math.random() * 8 + 6 + 'px'; // Random width</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confetti.style.height = confetti.style.width; // Square or slightly rectangular</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 70%)`; // Random bright color</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confetti.style.animationDuration = Math.random() * 3 + 3 + 's'; // 3-6 seconds</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confetti.style.animationDelay = Math.random() * 2 + 's'; // 0-2 seconds delay</p>
-<p class="p2"><span class="Apple-converted-space">            </span></p>
-<p class="p1"><span class="Apple-converted-space">            </span>const shape = Math.random();</p>
-<p class="p1"><span class="Apple-converted-space">            </span>if (shape &lt; 0.3) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>confetti.style.borderRadius = '0'; // Square</p>
-<p class="p1"><span class="Apple-converted-space">            </span>} else if (shape &lt; 0.7) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>confetti.style.borderRadius = '50%'; // Circle</p>
-<p class="p1"><span class="Apple-converted-space">            </span>} else {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>// Rectangle<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">                 </span>confetti.style.height = Math.random() * 10 + 5 + 'px';</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p1"><span class="Apple-converted-space">            </span>return confetti;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>let confettiInterval;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>function startConfetti() {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confettiContainer.classList.remove('hidden');</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confettiContainer.innerHTML = ''; // Clear existing confetti</p>
-<p class="p1"><span class="Apple-converted-space">            </span>for (let i = 0; i &lt; 50; i++) { // Create initial burst</p>
-<p class="p1"><span class="Apple-converted-space">                </span>confettiContainer.appendChild(createConfettiPiece());</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}</p>
-<p class="p1"><span class="Apple-converted-space">            </span>// Add more confetti periodically</p>
-<p class="p1"><span class="Apple-converted-space">            </span>confettiInterval = setInterval(() =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>if (confettiContainer.children.length &lt; 100) { // Limit total confetti</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>confettiContainer.appendChild(createConfettiPiece());</p>
-<p class="p1"><span class="Apple-converted-space">                </span>}</p>
-<p class="p1"><span class="Apple-converted-space">                </span>// Remove old confetti that has fallen off screen</p>
-<p class="p1"><span class="Apple-converted-space">                </span>const oldConfetti = confettiContainer.querySelector('.confetti');</p>
-<p class="p1"><span class="Apple-converted-space">                </span>if (oldConfetti &amp;&amp; oldConfetti.offsetTop &gt; window.innerHeight) {</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>oldConfetti.remove();</p>
-<p class="p1"><span class="Apple-converted-space">                </span>}</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}, 300);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>function stopConfetti() {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>clearInterval(confettiInterval);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>// Allow existing confetti to fall off screen before hiding container</p>
-<p class="p1"><span class="Apple-converted-space">            </span>setTimeout(() =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>confettiContainer.classList.add('hidden');</p>
-<p class="p1"><span class="Apple-converted-space">                </span>confettiContainer.innerHTML = ''; // Clear out confetti for next time</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}, 5000); // Match longest animation duration of confetti</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
-<p class="p1">&lt;/body&gt;</p>
-<p class="p1">&lt;/html&gt;</p>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4 md:p-8 pose-colors">
+
+    <div class="bg-white p-6 md:p-8 rounded-lg shadow-lg w-full max-w-2xl text-center">
+        <h1 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">MoveNet MultiPose Detection</h1>
+
+        <div class="mb-6">
+            <label for="image-upload" class="block text-sm font-medium text-gray-700 mb-2">Upload an Image:</label>
+            <input type="file" id="image-upload" accept="image/*" class="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-50 file:text-blue-700
+                hover:file:bg-blue-100 cursor-pointer
+            "/>
+        </div>
+
+        <div id="status" class="text-gray-600 mb-4 h-10 flex items-center justify-center">
+             Please upload an image.
+        </div>
+        <div id="loader" class="loader hidden"></div> <div id="output-container" class="mb-6 w-full aspect-video bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+             <img id="uploaded-image" alt="Uploaded Image" class="hidden"/>
+             <canvas id="output-canvas"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('image-upload');
+        const uploadedImage = document.getElementById('uploaded-image');
+        const outputCanvas = document.getElementById('output-canvas');
+        const outputContainer = document.getElementById('output-container');
+        const statusDiv = document.getElementById('status');
+        const loaderDiv = document.getElementById('loader');
+        const ctx = outputCanvas.getContext('2d');
+
+        // --- Configuration ---
+        // Path to YOUR model.json (ensure this is correct)
+        const CUSTOM_MODEL_URL = './model.json';
+        // MoveNet Model Type
+        const MODEL_TYPE = poseDetection.SupportedModels.MoveNet;
+        // *** CHANGE: Specify MultiPose Lightning model type ***
+        const movenetType = poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING;
+
+        // Define colors for drawing different poses
+        const poseColors = ['aqua', 'lime', 'yellow', 'fuchsia', 'orange', 'red'];
+
+        let detector = null;
+        let currentImage = null;
+
+        // --- Utility Functions ---
+
+        function showStatus(message) {
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
+            loaderDiv.classList.add('hidden');
+        }
+
+        function showLoader(message) {
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden'); // Keep message visible
+            loaderDiv.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+             statusDiv.classList.add('hidden');
+             loaderDiv.classList.add('hidden');
+        }
+
+        // *** CHANGE: Function to draw keypoints (dots) for a specific pose index ***
+        function drawKeypoints(keypoints, poseIndex) {
+            const color = poseColors[poseIndex % poseColors.length]; // Cycle through colors
+            ctx.fillStyle = color;
+            for (const keypoint of keypoints) {
+                if (keypoint.score > 0.3) { // Only draw confident keypoints
+                    ctx.beginPath();
+                    ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // *** CHANGE: Function to draw the skeleton for a specific pose index ***
+        function drawSkeleton(keypoints, poseIndex) {
+            const color = poseColors[poseIndex % poseColors.length]; // Cycle through colors
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+
+            // Define connections based on MoveNet keypoint order
+             const connections = [
+                [5, 6], // Torso line
+                [5, 7], [7, 9], // Left arm
+                [6, 8], [8, 10], // Right arm
+                [5, 11], [6, 12], // Shoulders to hips
+                [11, 12], // Hip line
+                [11, 13], [13, 15], // Left leg
+                [12, 14], [14, 16] // Right leg
+            ];
+
+            for (const [startIdx, endIdx] of connections) {
+                const kp1 = keypoints[startIdx];
+                const kp2 = keypoints[endIdx];
+
+                // Draw line only if both keypoints are confident enough
+                if (kp1 && kp2 && kp1.score > 0.3 && kp2.score > 0.3) {
+                    ctx.beginPath();
+                    ctx.moveTo(kp1.x, kp1.y);
+                    ctx.lineTo(kp2.x, kp2.y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+
+        // --- Main Logic ---
+
+        // Load the MoveNet model
+        async function loadModel() {
+            showLoader('Loading MultiPose model...'); // Update status message
+            try {
+                 // Set backend and wait for it to be ready
+                 await tf.setBackend('webgl');
+                 await tf.ready();
+
+                const detectorConfig = {
+                    modelType: movenetType,
+                    // *** CHANGE: Enable loading YOUR custom model files ***
+                    modelUrl: CUSTOM_MODEL_URL
+                    // ======================================================
+                };
+                // Create detector using the MultiPose configuration and your model URL
+                detector = await poseDetection.createDetector(MODEL_TYPE, detectorConfig);
+
+                // Determine which model was loaded for the status message
+                const loadedModelSource = detectorConfig.modelUrl ? "custom MultiPose model" : "default Google model"; // Update status
+                showStatus(`Model loaded (${loadedModelSource}). Ready for image upload.`);
+                console.log(`MoveNet detector loaded successfully (${loadedModelSource}).`);
+
+            } catch (error) {
+                showStatus('Error loading model. Check console.');
+                console.error('Error loading MoveNet model:', error);
+            }
+        }
+
+        // Handle image upload
+        imageUpload.onchange = async (event) => {
+            const file = event.target.files[0];
+            if (!file || !detector) {
+                 if(!detector) showStatus("Model not loaded yet.");
+                return;
+            }
+
+            showLoader('Processing image...');
+            currentImage = new Image();
+            currentImage.src = URL.createObjectURL(file);
+
+            currentImage.onload = async () => {
+                // Set canvas dimensions to match image AFTER it's loaded
+                outputCanvas.width = currentImage.naturalWidth;
+                outputCanvas.height = currentImage.naturalHeight;
+
+                // Display the uploaded image (behind the canvas)
+                uploadedImage.src = currentImage.src;
+                uploadedImage.classList.remove('hidden');
+                uploadedImage.style.width = '100%'; // Ensure it fills container width
+                uploadedImage.style.height = 'auto'; // Maintain aspect ratio
+
+                // Estimate poses
+                try {
+                    // *** CHANGE: Configuration for MultiPose estimation ***
+                    const estimationConfig = {
+                        maxPoses: 6, // Max poses MoveNet MultiPose can detect
+                        // flipHorizontal: false, // Default is false
+                        // scoreThreshold: 0.5, // Default confidence threshold for overall pose
+                        // nmsRadius: 20 // Default Non-Maximum Suppression radius
+                    };
+                    const poses = await detector.estimatePoses(currentImage, estimationConfig);
+
+                    // Clear previous drawings
+                    ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+                    if (poses && poses.length > 0) {
+                        // *** CHANGE: Loop through all detected poses ***
+                        showStatus(`${poses.length} pose(s) detected!`);
+                        console.log('Detected Poses:', poses);
+                        for (let i = 0; i < poses.length; i++) {
+                            const pose = poses[i];
+                            drawKeypoints(pose.keypoints, i); // Pass index for color
+                            drawSkeleton(pose.keypoints, i);  // Pass index for color
+                        }
+                    } else {
+                        showStatus('No pose detected in the image.');
+                    }
+                } catch (error) {
+                    // Check console for errors like the previous shape mismatch
+                    showStatus('Error during pose estimation. Check console.');
+                    console.error('Error estimating pose:', error); // Log the specific error
+                } finally {
+                    URL.revokeObjectURL(currentImage.src); // Clean up blob URL
+                }
+            };
+             currentImage.onerror = () => {
+                 showStatus("Error loading image file.");
+                 loaderDiv.classList.add('hidden');
+             }
+        };
+
+        // --- Initialization ---
+        loadModel(); // Load the model when the script runs
+
+    </script>
+
 </body>
 </html>
