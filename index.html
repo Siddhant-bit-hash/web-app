@@ -1,0 +1,273 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.3">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="en"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;MoveNet Pose Detection&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"&gt;&lt;/script&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* Custom styles for better visual feedback */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>body {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-family: 'Inter', sans-serif; /* Assuming Inter font is preferred */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.loader {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border: 4px solid #f3f3f3; /* Light grey */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-top: 4px solid #3498db; /* Blue */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 50%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 40px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>height: 40px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>animation: spin 1s linear infinite;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 20px auto;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>@keyframes spin {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>0% { transform: rotate(0deg); }</p>
+<p class="p1"><span class="Apple-converted-space">            </span>100% { transform: rotate(360deg); }</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* Ensure canvas overlays the image correctly */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>#output-container {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>position: relative;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>max-width: 100%; /* Limit container width */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: auto; /* Center the container */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>#output-canvas {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>position: absolute;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>top: 0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>left: 0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>#uploaded-image {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: block; /* Prevents extra space below image */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>max-width: 100%; /* Make image responsive */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>height: auto; /* Maintain aspect ratio */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 0.5rem; /* Rounded corners */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body class="bg-gray-100 flex flex-col items-center min-h-screen p-4 md:p-8"&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="bg-white p-6 md:p-8 rounded-lg shadow-lg w-full max-w-2xl text-center"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;h1 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800"&gt;MoveNet Pose Detection&lt;/h1&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="mb-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;label for="image-upload" class="block text-sm font-medium text-gray-700 mb-2"&gt;Upload an Image:&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;input type="file" id="image-upload" accept="image/*" class="block w-full text-sm text-gray-500</p>
+<p class="p1"><span class="Apple-converted-space">                </span>file:mr-4 file:py-2 file:px-4</p>
+<p class="p1"><span class="Apple-converted-space">                </span>file:rounded-full file:border-0</p>
+<p class="p1"><span class="Apple-converted-space">                </span>file:text-sm file:font-semibold</p>
+<p class="p1"><span class="Apple-converted-space">                </span>file:bg-blue-50 file:text-blue-700</p>
+<p class="p1"><span class="Apple-converted-space">                </span>hover:file:bg-blue-100 cursor-pointer</p>
+<p class="p1"><span class="Apple-converted-space">            </span>"/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div id="status" class="text-gray-600 mb-4 h-10 flex items-center justify-center"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">             </span>Please upload an image.</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div id="loader" class="loader hidden"&gt;&lt;/div&gt; &lt;div id="output-container" class="mb-6 w-full aspect-video bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">             </span>&lt;img id="uploaded-image" alt="Uploaded Image" class="hidden"/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">             </span>&lt;canvas id="output-canvas"&gt;&lt;/canvas&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const imageUpload = document.getElementById('image-upload');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const uploadedImage = document.getElementById('uploaded-image');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const outputCanvas = document.getElementById('output-canvas');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const outputContainer = document.getElementById('output-container');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const statusDiv = document.getElementById('status');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const loaderDiv = document.getElementById('loader');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const ctx = outputCanvas.getContext('2d');</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// --- Configuration ---</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// IMPORTANT: Adjust this path if your model files are in a subfolder</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// e.g., './model/model.json' if they are in a 'model' folder</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const MODEL_URL = './model.json';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// MoveNet Model Type (adjust if using 'thunder')</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// Use 'MoveNetModel.Lightning' or 'MoveNetModel.Thunder'</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const MODEL_TYPE = poseDetection.SupportedModels.MoveNet;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const movenetType = poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING; // Or .SINGLEPOSE_THUNDER</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>let detector = null;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let currentImage = null;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// --- Utility Functions ---</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>function showStatus(message) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>statusDiv.textContent = message;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>statusDiv.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>loaderDiv.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>function showLoader(message) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>statusDiv.textContent = message;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>statusDiv.classList.remove('hidden'); // Keep message visible</p>
+<p class="p1"><span class="Apple-converted-space">            </span>loaderDiv.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>function hideStatus() {</p>
+<p class="p1"><span class="Apple-converted-space">             </span>statusDiv.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">             </span>loaderDiv.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// Function to draw keypoints (dots)</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function drawKeypoints(keypoints) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>for (const keypoint of keypoints) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>if (keypoint.score &gt; 0.3) { // Only draw confident keypoints</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.beginPath();</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.fillStyle = 'aqua'; // Color of the points</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.fill();</p>
+<p class="p1"><span class="Apple-converted-space">                </span>}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// Function to draw the skeleton (lines connecting keypoints)</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function drawSkeleton(keypoints) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>ctx.fillStyle = 'white'; // Color of the lines</p>
+<p class="p1"><span class="Apple-converted-space">            </span>ctx.strokeStyle = 'white';</p>
+<p class="p1"><span class="Apple-converted-space">            </span>ctx.lineWidth = 2;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>// Define connections based on MoveNet keypoint order</p>
+<p class="p1"><span class="Apple-converted-space">            </span>// See https://github.com/tensorflow/tfjs-models/tree/master/pose-detection#movenet-keypoints-used-in-poseskeleton</p>
+<p class="p1"><span class="Apple-converted-space">             </span>const connections = [</p>
+<p class="p1"><span class="Apple-converted-space">                </span>// Face lines are often omitted for clarity, add if needed</p>
+<p class="p1"><span class="Apple-converted-space">                </span>// [0, 1], [0, 2], [1, 3], [2, 4], // Face</p>
+<p class="p1"><span class="Apple-converted-space">                </span>[5, 6], // Torso line</p>
+<p class="p1"><span class="Apple-converted-space">                </span>[5, 7], [7, 9], // Left arm</p>
+<p class="p1"><span class="Apple-converted-space">                </span>[6, 8], [8, 10], // Right arm</p>
+<p class="p1"><span class="Apple-converted-space">                </span>[5, 11], [6, 12], // Shoulders to hips</p>
+<p class="p1"><span class="Apple-converted-space">                </span>[11, 12], // Hip line</p>
+<p class="p1"><span class="Apple-converted-space">                </span>[11, 13], [13, 15], // Left leg</p>
+<p class="p1"><span class="Apple-converted-space">                </span>[12, 14], [14, 16] // Right leg</p>
+<p class="p1"><span class="Apple-converted-space">            </span>];</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>for (const [startIdx, endIdx] of connections) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const kp1 = keypoints[startIdx];</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const kp2 = keypoints[endIdx];</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>// Draw line only if both keypoints are confident enough</p>
+<p class="p1"><span class="Apple-converted-space">                </span>if (kp1 &amp;&amp; kp2 &amp;&amp; kp1.score &gt; 0.3 &amp;&amp; kp2.score &gt; 0.3) {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.beginPath();</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.moveTo(kp1.x, kp1.y);</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.lineTo(kp2.x, kp2.y);</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.stroke();</p>
+<p class="p1"><span class="Apple-converted-space">                </span>}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// --- Main Logic ---</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// Load the MoveNet model</p>
+<p class="p1"><span class="Apple-converted-space">        </span>async function loadModel() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>showLoader('Loading model...');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>try {</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>// Set backend and wait for it to be ready</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>await tf.setBackend('webgl');</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>await tf.ready();</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>const detectorConfig = {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>modelType: movenetType,</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>modelUrl: MODEL_URL // Use the custom model URL</p>
+<p class="p1"><span class="Apple-converted-space">                </span>};</p>
+<p class="p1"><span class="Apple-converted-space">                </span>detector = await poseDetection.createDetector(MODEL_TYPE, detectorConfig);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>showStatus('Model loaded. Ready for image upload.');</p>
+<p class="p1"><span class="Apple-converted-space">                </span>console.log('MoveNet detector loaded successfully.');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>} catch (error) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>showStatus('Error loading model. Check console.');</p>
+<p class="p1"><span class="Apple-converted-space">                </span>console.error('Error loading MoveNet model:', error);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// Handle image upload</p>
+<p class="p1"><span class="Apple-converted-space">        </span>imageUpload.onchange = async (event) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const file = event.target.files[0];</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if (!file || !detector) {</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>if(!detector) showStatus("Model not loaded yet.");</p>
+<p class="p1"><span class="Apple-converted-space">                </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>showLoader('Processing image...');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>currentImage = new Image();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>currentImage.src = URL.createObjectURL(file);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>currentImage.onload = async () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>// Set canvas dimensions to match image AFTER it's loaded</p>
+<p class="p1"><span class="Apple-converted-space">                </span>outputCanvas.width = currentImage.naturalWidth;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>outputCanvas.height = currentImage.naturalHeight;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>// Display the uploaded image (behind the canvas)</p>
+<p class="p1"><span class="Apple-converted-space">                </span>uploadedImage.src = currentImage.src;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>uploadedImage.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">                </span>uploadedImage.style.width = '100%'; // Ensure it fills container width</p>
+<p class="p1"><span class="Apple-converted-space">                </span>uploadedImage.style.height = 'auto'; // Maintain aspect ratio</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>// Estimate poses</p>
+<p class="p1"><span class="Apple-converted-space">                </span>try {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>const poses = await detector.estimatePoses(currentImage, {</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>// maxPoses: 1, // For single pose models like MoveNet singlepose</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>// flipHorizontal: false // Default is false</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>// Clear previous drawings</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>// Draw the original image onto the canvas (optional, can use CSS background)</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>// ctx.drawImage(currentImage, 0, 0, outputCanvas.width, outputCanvas.height);</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>if (poses &amp;&amp; poses.length &gt; 0) {</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>// Draw keypoints and skeleton for the first detected pose</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>drawKeypoints(poses[0].keypoints);</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>drawSkeleton(poses[0].keypoints);</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>showStatus('Pose detected!');</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>console.log('Detected Poses:', poses);</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>showStatus('No pose detected in the image.');</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>} catch (error) {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>showStatus('Error during pose estimation. Check console.');</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>console.error('Error estimating pose:', error);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>} finally {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>URL.revokeObjectURL(currentImage.src); // Clean up blob URL</p>
+<p class="p1"><span class="Apple-converted-space">                </span>}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>};</p>
+<p class="p1"><span class="Apple-converted-space">             </span>currentImage.onerror = () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>showStatus("Error loading image file.");</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>loaderDiv.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">             </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// --- Initialization ---</p>
+<p class="p1"><span class="Apple-converted-space">        </span>loadModel(); // Load the model when the script runs</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>
