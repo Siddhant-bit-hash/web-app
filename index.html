@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoveNet Pose Detection</title>
+    <title>MoveNet MultiPose Detection</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
@@ -47,15 +47,24 @@
             height: auto; /* Maintain aspect ratio */
             border-radius: 0.5rem; /* Rounded corners */
         }
+        /* Add distinct colors for multiple poses */
+        .pose-colors {
+            --color-0: aqua;
+            --color-1: lime;
+            --color-2: yellow;
+            --color-3: fuchsia;
+            --color-4: orange;
+            --color-5: red;
+        }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4 md:p-8">
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4 md:p-8 pose-colors">
 
     <div class="bg-white p-6 md:p-8 rounded-lg shadow-lg w-full max-w-2xl text-center">
-        <h1 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">MoveNet Pose Detection</h1>
+        <h1 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">MoveNet MultiPose Detection</h1>
 
         <div class="mb-6">
             <label for="image-upload" class="block text-sm font-medium text-gray-700 mb-2">Upload an Image:</label>
@@ -88,11 +97,15 @@
         const ctx = outputCanvas.getContext('2d');
 
         // --- Configuration ---
-        // Path to YOUR model.json (if using custom model)
-        const CUSTOM_MODEL_URL = './model.json'; // Keep your path here
+        // Path to YOUR model.json (ensure this is correct)
+        const CUSTOM_MODEL_URL = './model.json';
         // MoveNet Model Type
         const MODEL_TYPE = poseDetection.SupportedModels.MoveNet;
-        const movenetType = poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING; // Or .SINGLEPOSE_THUNDER
+        // *** CHANGE: Specify MultiPose Lightning model type ***
+        const movenetType = poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING;
+
+        // Define colors for drawing different poses
+        const poseColors = ['aqua', 'lime', 'yellow', 'fuchsia', 'orange', 'red'];
 
         let detector = null;
         let currentImage = null;
@@ -116,22 +129,23 @@
              loaderDiv.classList.add('hidden');
         }
 
-        // Function to draw keypoints (dots)
-        function drawKeypoints(keypoints) {
+        // *** CHANGE: Function to draw keypoints (dots) for a specific pose index ***
+        function drawKeypoints(keypoints, poseIndex) {
+            const color = poseColors[poseIndex % poseColors.length]; // Cycle through colors
+            ctx.fillStyle = color;
             for (const keypoint of keypoints) {
                 if (keypoint.score > 0.3) { // Only draw confident keypoints
                     ctx.beginPath();
                     ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
-                    ctx.fillStyle = 'aqua'; // Color of the points
                     ctx.fill();
                 }
             }
         }
 
-        // Function to draw the skeleton (lines connecting keypoints)
-        function drawSkeleton(keypoints) {
-            ctx.fillStyle = 'white'; // Color of the lines
-            ctx.strokeStyle = 'white';
+        // *** CHANGE: Function to draw the skeleton for a specific pose index ***
+        function drawSkeleton(keypoints, poseIndex) {
+            const color = poseColors[poseIndex % poseColors.length]; // Cycle through colors
+            ctx.strokeStyle = color;
             ctx.lineWidth = 2;
 
             // Define connections based on MoveNet keypoint order
@@ -144,7 +158,6 @@
                 [11, 13], [13, 15], // Left leg
                 [12, 14], [14, 16] // Right leg
             ];
-
 
             for (const [startIdx, endIdx] of connections) {
                 const kp1 = keypoints[startIdx];
@@ -165,7 +178,7 @@
 
         // Load the MoveNet model
         async function loadModel() {
-            showLoader('Loading model...');
+            showLoader('Loading MultiPose model...'); // Update status message
             try {
                  // Set backend and wait for it to be ready
                  await tf.setBackend('webgl');
@@ -173,16 +186,15 @@
 
                 const detectorConfig = {
                     modelType: movenetType,
-                    // === TEST: Comment out modelUrl to load the DEFAULT model ===
-                    // modelUrl: CUSTOM_MODEL_URL // Use the custom model URL
-                    // ============================================================
+                    // *** CHANGE: Enable loading YOUR custom model files ***
+                    modelUrl: CUSTOM_MODEL_URL
+                    // ======================================================
                 };
-                // If modelUrl is commented out, createDetector will load the default
-                // model associated with 'movenetType' from Google's CDN.
+                // Create detector using the MultiPose configuration and your model URL
                 detector = await poseDetection.createDetector(MODEL_TYPE, detectorConfig);
 
                 // Determine which model was loaded for the status message
-                const loadedModelSource = detectorConfig.modelUrl ? "custom model" : "default Google model";
+                const loadedModelSource = detectorConfig.modelUrl ? "custom MultiPose model" : "default Google model"; // Update status
                 showStatus(`Model loaded (${loadedModelSource}). Ready for image upload.`);
                 console.log(`MoveNet detector loaded successfully (${loadedModelSource}).`);
 
@@ -217,25 +229,32 @@
 
                 // Estimate poses
                 try {
-                    const poses = await detector.estimatePoses(currentImage, {
-                        // maxPoses: 1, // For single pose models like MoveNet singlepose
-                        // flipHorizontal: false // Default is false
-                    });
+                    // *** CHANGE: Configuration for MultiPose estimation ***
+                    const estimationConfig = {
+                        maxPoses: 6, // Max poses MoveNet MultiPose can detect
+                        // flipHorizontal: false, // Default is false
+                        // scoreThreshold: 0.5, // Default confidence threshold for overall pose
+                        // nmsRadius: 20 // Default Non-Maximum Suppression radius
+                    };
+                    const poses = await detector.estimatePoses(currentImage, estimationConfig);
 
                     // Clear previous drawings
                     ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
                     if (poses && poses.length > 0) {
-                        // Draw keypoints and skeleton for the first detected pose
-                        drawKeypoints(poses[0].keypoints);
-                        drawSkeleton(poses[0].keypoints);
-                        showStatus('Pose detected!');
+                        // *** CHANGE: Loop through all detected poses ***
+                        showStatus(`${poses.length} pose(s) detected!`);
                         console.log('Detected Poses:', poses);
+                        for (let i = 0; i < poses.length; i++) {
+                            const pose = poses[i];
+                            drawKeypoints(pose.keypoints, i); // Pass index for color
+                            drawSkeleton(pose.keypoints, i);  // Pass index for color
+                        }
                     } else {
                         showStatus('No pose detected in the image.');
                     }
                 } catch (error) {
-                    // This is where your error is currently happening
+                    // Check console for errors like the previous shape mismatch
                     showStatus('Error during pose estimation. Check console.');
                     console.error('Error estimating pose:', error); // Log the specific error
                 } finally {
