@@ -1,5 +1,257 @@
 <!DOCTYPE html>
-<html>
-<head><title>Test Page</title></head>
-<body><h1>Hello GitHub Pages Test</h1></body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoveNet Pose Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+
+    <style>
+        /* Custom styles for better visual feedback */
+        body {
+            font-family: 'Inter', sans-serif; /* Assuming Inter font is preferred */
+        }
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Ensure canvas overlays the image correctly */
+        #output-container {
+            position: relative;
+            max-width: 100%; /* Limit container width */
+            margin: auto; /* Center the container */
+        }
+        #output-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #uploaded-image {
+            display: block; /* Prevents extra space below image */
+            max-width: 100%; /* Make image responsive */
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 0.5rem; /* Rounded corners */
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4 md:p-8">
+
+    <div class="bg-white p-6 md:p-8 rounded-lg shadow-lg w-full max-w-2xl text-center">
+        <h1 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">MoveNet Pose Detection</h1>
+
+        <div class="mb-6">
+            <label for="image-upload" class="block text-sm font-medium text-gray-700 mb-2">Upload an Image:</label>
+            <input type="file" id="image-upload" accept="image/*" class="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-50 file:text-blue-700
+                hover:file:bg-blue-100 cursor-pointer
+            "/>
+        </div>
+
+        <div id="status" class="text-gray-600 mb-4 h-10 flex items-center justify-center">
+             Please upload an image.
+        </div>
+        <div id="loader" class="loader hidden"></div> <div id="output-container" class="mb-6 w-full aspect-video bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+             <img id="uploaded-image" alt="Uploaded Image" class="hidden"/>
+             <canvas id="output-canvas"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('image-upload');
+        const uploadedImage = document.getElementById('uploaded-image');
+        const outputCanvas = document.getElementById('output-canvas');
+        const outputContainer = document.getElementById('output-container');
+        const statusDiv = document.getElementById('status');
+        const loaderDiv = document.getElementById('loader');
+        const ctx = outputCanvas.getContext('2d');
+
+        // --- Configuration ---
+        // IMPORTANT: Adjust this path if your model files are in a subfolder
+        // e.g., './model/model.json' if they are in a 'model' folder
+        const MODEL_URL = './model.json';
+        // MoveNet Model Type (adjust if using 'thunder')
+        // Use 'MoveNetModel.Lightning' or 'MoveNetModel.Thunder'
+        const MODEL_TYPE = poseDetection.SupportedModels.MoveNet;
+        const movenetType = poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING; // Or .SINGLEPOSE_THUNDER
+
+        let detector = null;
+        let currentImage = null;
+
+        // --- Utility Functions ---
+
+        function showStatus(message) {
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
+            loaderDiv.classList.add('hidden');
+        }
+
+        function showLoader(message) {
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden'); // Keep message visible
+            loaderDiv.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+             statusDiv.classList.add('hidden');
+             loaderDiv.classList.add('hidden');
+        }
+
+        // Function to draw keypoints (dots)
+        function drawKeypoints(keypoints) {
+            for (const keypoint of keypoints) {
+                if (keypoint.score > 0.3) { // Only draw confident keypoints
+                    ctx.beginPath();
+                    ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'aqua'; // Color of the points
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Function to draw the skeleton (lines connecting keypoints)
+        function drawSkeleton(keypoints) {
+            ctx.fillStyle = 'white'; // Color of the lines
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+
+            // Define connections based on MoveNet keypoint order
+            // See https://github.com/tensorflow/tfjs-models/tree/master/pose-detection#movenet-keypoints-used-in-poseskeleton
+             const connections = [
+                // Face lines are often omitted for clarity, add if needed
+                // [0, 1], [0, 2], [1, 3], [2, 4], // Face
+                [5, 6], // Torso line
+                [5, 7], [7, 9], // Left arm
+                [6, 8], [8, 10], // Right arm
+                [5, 11], [6, 12], // Shoulders to hips
+                [11, 12], // Hip line
+                [11, 13], [13, 15], // Left leg
+                [12, 14], [14, 16] // Right leg
+            ];
+
+
+            for (const [startIdx, endIdx] of connections) {
+                const kp1 = keypoints[startIdx];
+                const kp2 = keypoints[endIdx];
+
+                // Draw line only if both keypoints are confident enough
+                if (kp1 && kp2 && kp1.score > 0.3 && kp2.score > 0.3) {
+                    ctx.beginPath();
+                    ctx.moveTo(kp1.x, kp1.y);
+                    ctx.lineTo(kp2.x, kp2.y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+
+        // --- Main Logic ---
+
+        // Load the MoveNet model
+        async function loadModel() {
+            showLoader('Loading model...');
+            try {
+                 // Set backend and wait for it to be ready
+                 await tf.setBackend('webgl');
+                 await tf.ready();
+
+                const detectorConfig = {
+                    modelType: movenetType,
+                    modelUrl: MODEL_URL // Use the custom model URL
+                };
+                detector = await poseDetection.createDetector(MODEL_TYPE, detectorConfig);
+                showStatus('Model loaded. Ready for image upload.');
+                console.log('MoveNet detector loaded successfully.');
+            } catch (error) {
+                showStatus('Error loading model. Check console.');
+                console.error('Error loading MoveNet model:', error);
+            }
+        }
+
+        // Handle image upload
+        imageUpload.onchange = async (event) => {
+            const file = event.target.files[0];
+            if (!file || !detector) {
+                 if(!detector) showStatus("Model not loaded yet.");
+                return;
+            }
+
+            showLoader('Processing image...');
+            currentImage = new Image();
+            currentImage.src = URL.createObjectURL(file);
+
+            currentImage.onload = async () => {
+                // Set canvas dimensions to match image AFTER it's loaded
+                outputCanvas.width = currentImage.naturalWidth;
+                outputCanvas.height = currentImage.naturalHeight;
+
+                // Display the uploaded image (behind the canvas)
+                uploadedImage.src = currentImage.src;
+                uploadedImage.classList.remove('hidden');
+                uploadedImage.style.width = '100%'; // Ensure it fills container width
+                uploadedImage.style.height = 'auto'; // Maintain aspect ratio
+
+                // Estimate poses
+                try {
+                    const poses = await detector.estimatePoses(currentImage, {
+                        // maxPoses: 1, // For single pose models like MoveNet singlepose
+                        // flipHorizontal: false // Default is false
+                    });
+
+                    // Clear previous drawings
+                    ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+                    // Draw the original image onto the canvas (optional, can use CSS background)
+                    // ctx.drawImage(currentImage, 0, 0, outputCanvas.width, outputCanvas.height);
+
+
+                    if (poses && poses.length > 0) {
+                        // Draw keypoints and skeleton for the first detected pose
+                        drawKeypoints(poses[0].keypoints);
+                        drawSkeleton(poses[0].keypoints);
+                        showStatus('Pose detected!');
+                        console.log('Detected Poses:', poses);
+                    } else {
+                        showStatus('No pose detected in the image.');
+                    }
+                } catch (error) {
+                    showStatus('Error during pose estimation. Check console.');
+                    console.error('Error estimating pose:', error);
+                } finally {
+                    URL.revokeObjectURL(currentImage.src); // Clean up blob URL
+                }
+            };
+             currentImage.onerror = () => {
+                 showStatus("Error loading image file.");
+                 loaderDiv.classList.add('hidden');
+             }
+        };
+
+        // --- Initialization ---
+        loadModel(); // Load the model when the script runs
+
+    </script>
+
+</body>
 </html>
